@@ -130,15 +130,47 @@ impl<T> Receiver<T> {
     /// assert!(receiver.recv().is_err());
     /// ```
     pub fn recv(&self) -> Result<T, RecvError> {
-        use std::time::Duration;
+        loop {
+            let mut guard = self.buffer.lock().unwrap();
 
+            if let Some(data) = guard.take() {
+                break Ok(data);
+            }
+
+            if !self.has_updater() {
+                break Err(RecvError);
+            }
+
+            if let Some(data) = self.condvar.wait(guard).unwrap().take() {
+                break Ok(data);
+            }
+        }
+    }
+
+    pub fn recv_without_loop(&self) -> Result<T, RecvError> {
+        loop {
+            let mut guard = self.buffer.lock().unwrap();
+
+            if let Some(data) = guard.take() {
+                break Ok(data);
+            }
+
+            if !self.has_updater() {
+                break Err(RecvError);
+            }
+
+            if let Some(data) = self.condvar.wait(guard).unwrap().take() {
+                break Ok(data);
+            }
+        }
+    }
+
+    pub fn recv_with_period(&self, period: std::time::Duration) -> Result<T, RecvError> {
         loop {
             match self.try_recv() {
                 Ok(data) => break Ok(data),
                 Err(TryRecvError::Disconnected) => break Err(RecvError),
                 Err(TryRecvError::Empty) => {
-                    // NOTE: It may be desirable if this timeout duration can be specified by users.
-                    let dur = Duration::from_millis(1);
                     let guard = self.buffer.lock().unwrap();
 
                     // Wait a notification from the updater(s) without consuming CPU time.
@@ -148,7 +180,7 @@ impl<T> Receiver<T> {
                     // Condvar's wait methods may cause spurious wakeup.
                     // take() will return None under spurious wakeup because the updater(s) does not update the data yet.
                     // Thus, spurious wakeup does not corrupt channel's integrity.
-                    if let Some(data) = self.condvar.wait_timeout(guard, dur).unwrap().0.take() {
+                    if let Some(data) = self.condvar.wait_timeout(guard, period).unwrap().0.take() {
                         // The updater(s) sended notification during wait_timeout()
                         break Ok(data);
                     }
@@ -353,6 +385,14 @@ impl<T> Clone for Updater<T> {
         Self {
             dest: self.dest.clone(),
             condvar: self.condvar.clone(),
+        }
+    }
+}
+
+impl<T> Drop for Updater<T> {
+    fn drop(&mut self) {
+        if let Some(condvar) = self.condvar.upgrade() {
+            condvar.notify_one();
         }
     }
 }
