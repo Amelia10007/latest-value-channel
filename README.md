@@ -1,4 +1,4 @@
-# single_buffer_channel
+# latest_value_channel
 Multi-producer, single-consumer ***SINGLE*** data communication primitives.
 
 This crate provides a latest-message style channel, where the updater(s) can update the latest data that the receiver owns it.
@@ -10,7 +10,7 @@ These property are useful, for example, when a thread is interested in the ***la
 # Examples
 ## Basic usage
 ```rust
-use single_buffer_channel::channel;
+use latest_value_channel::channel;
 
 let (updater, receiver) = channel();
 
@@ -23,7 +23,7 @@ assert_eq!(Ok(1), receiver.recv());
 ```
 ## Multiple update
 ```rust
-use single_buffer_channel::channel;
+use latest_value_channel::channel;
 
 let (updater, receiver) = channel();
 let updater2 = updater.clone(); // updater can be cloned.
@@ -44,7 +44,7 @@ assert_eq!(Ok(200), receiver.recv());
 ```
 ## Receive after updater dropped
 ```rust
-use single_buffer_channel::channel;
+use latest_value_channel::channel;
 
 let (updater, receiver) = channel::<i32>();
 
@@ -54,7 +54,7 @@ assert!(receiver.recv().is_err());
 ```
 ## Receive after update and Updater dropped
 ```rust
-use single_buffer_channel::channel;
+use latest_value_channel::channel;
 
 let (updater, receiver) = channel();
 

@@ -1,4 +1,4 @@
-use single_buffer_channel::channel;
+use latest_value_channel::channel;
 use std::time::Duration;
 
 fn main() {

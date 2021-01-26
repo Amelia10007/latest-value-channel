@@ -10,7 +10,7 @@
 //! # Examples
 //! ## Basic usage
 //! ```
-//! use single_buffer_channel::channel;
+//! use latest_value_channel::channel;
 //!
 //! let (updater, receiver) = channel();
 //!
@@ -23,7 +23,7 @@
 //! ```
 //! ## Multiple update
 //! ```
-//! use single_buffer_channel::channel;
+//! use latest_value_channel::channel;
 //!
 //! let (updater, receiver) = channel();
 //! let updater2 = updater.clone(); // updater can be cloned.
@@ -44,7 +44,7 @@
 //! ```
 //! ## Receive after updater dropped
 //! ```
-//! use single_buffer_channel::channel;
+//! use latest_value_channel::channel;
 //!
 //! let (updater, receiver) = channel::<i32>();
 //!
@@ -54,7 +54,7 @@
 //! ```
 //! ## Receive after update and updater dropped
 //! ```
-//! use single_buffer_channel::channel;
+//! use latest_value_channel::channel;
 //!
 //! let (updater, receiver) = channel();
 //!
@@ -95,7 +95,7 @@ impl<T> Receiver<T> {
     /// # Examples
     /// ## Basic usage
     /// ```
-    /// use single_buffer_channel::channel;
+    /// use latest_value_channel::channel;
     ///
     /// let (updater, receiver) = channel();
     ///
@@ -104,7 +104,7 @@ impl<T> Receiver<T> {
     /// ```
     /// ## Receive after updater dropped
     /// ```
-    /// use single_buffer_channel::channel;
+    /// use latest_value_channel::channel;
     ///
     /// let (updater, receiver) = channel::<i32>();
     ///
@@ -114,7 +114,7 @@ impl<T> Receiver<T> {
     /// ```
     /// ## Receive after update and updater dropped
     /// ```
-    /// use single_buffer_channel::channel;
+    /// use latest_value_channel::channel;
     ///
     /// let (updater, receiver) = channel();
     ///
@@ -173,7 +173,7 @@ impl<T> Receiver<T> {
     ///
     /// # Examples
     /// ```
-    /// use single_buffer_channel::channel;
+    /// use latest_value_channel::channel;
     ///
     /// let (updater, receiver) = channel();
     /// // Nothing updated yet.
@@ -224,7 +224,7 @@ impl<T> IntoIterator for Receiver<T> {
 /// After the sender(s) of the channel has disconnected, this iterator returns `None`.
 /// # Examples
 /// ```
-/// use single_buffer_channel::channel;
+/// use latest_value_channel::channel;
 /// use std::thread::{sleep, spawn};
 /// use std::time::Duration;
 ///
@@ -314,7 +314,7 @@ impl<T> Updater<T> {
     /// # Examples
     /// ## Basic usage
     /// ```
-    /// use single_buffer_channel::channel;
+    /// use latest_value_channel::channel;
     ///
     /// let (updater, receiver) = channel();
     ///
@@ -323,7 +323,7 @@ impl<T> Updater<T> {
     /// ```
     /// ## `update` after `Receiver` dropped
     /// ```
-    /// use single_buffer_channel::channel;
+    /// use latest_value_channel::channel;
     ///
     /// let (updater, receiver) = channel();
     ///
@@ -378,7 +378,7 @@ impl<T: Debug> Error for UpdateError<T> {}
 /// The `Updater` can be cloned to update to the same channel multiple times, but only one `Receiver` is supported.
 /// # Examples
 /// ```
-/// use single_buffer_channel::channel;
+/// use latest_value_channel::channel;
 ///
 /// let (updater, receiver) = channel();
 ///

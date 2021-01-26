@@ -1,10 +1,10 @@
 [package]
-name = "single_buffer_channel"
+name = "latest-value-channel"
 description = "Multi-producer, single-consumer single value communication primitives."
 version = "0.1.0"
 authors = ["Amelia10007 <nat.horn.mk0426@gmail.com>"]
 edition = "2018"
-repository = "https://github.com/Amelia10007/single_buffer_channel"
+repository = "https://github.com/Amelia10007/latest-value-channel"
 keywords = ["concurrency", "channel", "std"]
 categories = ["concurrency"]
 licence = "MIT"

@@ -1,4 +1,4 @@
-use single_buffer_channel::channel;
+use latest_value_channel::channel;
 use std::time::Instant;
 
 fn bench_channel<T: Clone + Send + 'static>(data: T, update_count: u32) {
