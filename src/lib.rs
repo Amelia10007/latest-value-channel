@@ -132,6 +132,8 @@ impl<T> Receiver<T> {
     pub fn recv(&self) -> Result<T, RecvError> {
         let (buffer, cond) = self.inner.as_ref();
         loop {
+            // Prevent the updater's drop (updater's drop() locks the buffer).
+            // It is required to prevent eternal wait() below.
             let mut guard = buffer.lock().unwrap();
 
             if let Some(data) = guard.take() {
@@ -335,7 +337,10 @@ impl<T> Updater<T> {
 
 impl<T> Drop for Updater<T> {
     fn drop(&mut self) {
-        if let Some((_dest, cond)) = self.inner.upgrade().as_deref() {
+        if let Some((dest, cond)) = self.inner.upgrade().as_deref() {
+            // Send notification to exit receiver's wait() method.
+            // This is required for preventing eternal wait of condvar.
+            let _guard = dest.lock().unwrap();
             cond.notify_one();
         }
     }
