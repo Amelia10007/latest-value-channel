@@ -70,6 +70,8 @@ assert_eq!(Ok(1), receiver.recv());
 assert!(receiver.recv().is_err());
 ```
 
-# Related module and crate
+# Similar functionality module and crate
 - [std::sync::mpsc::channel](https://doc.rust-lang.org/std/sync/mpsc/index.html)
 - [single_value_channel](https://crates.io/crates/single_value_channel)
+- [update_channel](https://crates.io/crates/update_channel)
+- [latest](https://crates.io/crates/latest)
