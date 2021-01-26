@@ -285,7 +285,7 @@ impl Error for TryRecvError {}
 /// `update` will overwrite the existing data of the channel.
 ///
 /// The `Updater` can be cloned to update to the same channel multiple times.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Updater<T> {
     /// `inner.0`: destination to the buffer of the recevier.
     ///
@@ -331,6 +331,15 @@ impl<T> Updater<T> {
             Ok(())
         } else {
             Err(UpdateError(data))
+        }
+    }
+}
+
+// Updater is cloneable for any `T`
+impl<T> Clone for Updater<T> {
+    fn clone(&self) -> Self {
+        Self {
+            inner: self.inner.clone(),
         }
     }
 }
