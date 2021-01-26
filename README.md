@@ -1,4 +1,4 @@
-# latest-value-channel
+# latest-value-channel [![crates.io](https://img.shields.io/crates/v/latest-value-channel.svg)](https://crates.io/crates/latest-value-channel) [![Build Status](https://travis-ci.org/Amelia10007/latest-value-channel.svg?branch=master)](https://travis-ci.org/Amelia10007/latest-value-channel)
 Multi-producer, single-consumer ***SINGLE*** data communication primitives.
 
 This crate provides a latest-message style channel, where the updater(s) can update the latest data that the receiver owns it.
