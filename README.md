@@ -1,11 +1,13 @@
-# latest_value_channel
+# latest-value-channel
 Multi-producer, single-consumer ***SINGLE*** data communication primitives.
 
 This crate provides a latest-message style channel, where the updater(s) can update the latest data that the receiver owns it.
 
-Unlike the `std::sync::mpsc::channel`, by using `channel` of this crate, each data send will overwrite the original data.
+Unlike the `std::sync::mpsc::channel`, by using `channel` of this crate, the stored data will be overwritten.
 Once the `receiver` receives the data of its channel, `receiver` can retrieve nothing unless the updater(s) updates the data.
-These property are useful, for example, when a thread is interested in the ***latest*** result of another continually working thread.
+
+These property are useful when a thread is interested in the latest result of another continually working thread and wants to use the latest data only once.
+For example, this crate may be useful if you want to use measured values of sensors (such as camera, force-torque sensor, etc.).
 
 # Examples
 ## Basic usage
