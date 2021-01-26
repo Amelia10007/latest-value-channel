@@ -79,10 +79,10 @@ use std::sync::{Arc, Condvar, Mutex, Weak};
 /// Latest data of the channel can be retrieved using `recv` and `try_recv`.
 #[derive(Debug)]
 pub struct Receiver<T> {
-    /// Stores the latest data as `Some(data)`, or `None` if updater(s) has not call its `update` yet.
-    buffer: Arc<Mutex<Option<T>>>,
-    /// Receives notifications that the data is updated during wait.
-    condvar: Arc<Condvar>,
+    /// `inner.0`: stores the latest data as `Some(data)`, or `None` if updater(s) has not call its `update` yet.
+    ///
+    /// `inner.1`: receives notifications that the data is updated during wait.
+    inner: Arc<(Mutex<Option<T>>, Condvar)>,
 }
 
 impl<T> Receiver<T> {
@@ -137,9 +137,10 @@ impl<T> Receiver<T> {
                 Ok(data) => break Ok(data),
                 Err(TryRecvError::Disconnected) => break Err(RecvError),
                 Err(TryRecvError::Empty) => {
+                    let (buffer, cond) = self.inner.as_ref();
                     // NOTE: It may be desirable if this timeout duration can be specified by users.
                     let dur = Duration::from_millis(1);
-                    let guard = self.buffer.lock().unwrap();
+                    let guard = buffer.lock().unwrap();
 
                     // Wait a notification from the updater(s) without consuming CPU time.
                     // Use wait_timeout() instead of wait().
@@ -148,7 +149,7 @@ impl<T> Receiver<T> {
                     // Condvar's wait methods may cause spurious wakeup.
                     // take() will return None under spurious wakeup because the updater(s) does not update the data yet.
                     // Thus, spurious wakeup does not corrupt channel's integrity.
-                    if let Some(data) = self.condvar.wait_timeout(guard, dur).unwrap().0.take() {
+                    if let Some(data) = cond.wait_timeout(guard, dur).unwrap().0.take() {
                         // The updater(s) sended notification during wait_timeout()
                         break Ok(data);
                     }
@@ -191,7 +192,7 @@ impl<T> Receiver<T> {
         // lock() fails if another owner of the mutex has panicked during holding it.
         // But the owners (updater) never panic at the time.
         // Therefore, this unwrap() always succeeds.
-        match self.buffer.lock().unwrap().take() {
+        match self.inner.0.lock().unwrap().take() {
             Some(data) => Ok(data),
             None => {
                 let has_updater = self.has_updater();
@@ -206,7 +207,7 @@ impl<T> Receiver<T> {
 
     /// Returns `true` if there is at least 1 updater of this channel.
     fn has_updater(&self) -> bool {
-        Arc::weak_count(&self.buffer) != 0
+        Arc::weak_count(&self.inner) != 0
     }
 }
 
@@ -298,12 +299,12 @@ impl Error for TryRecvError {}
 /// `update` will overwrite the existing data of the channel.
 ///
 /// The `Updater` can be cloned to update to the same channel multiple times.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Updater<T> {
-    /// Destination to the buffer of the recevier.
-    dest: Weak<Mutex<Option<T>>>,
-    /// Sends notifications that the data is updated to the receiver.
-    condvar: Weak<Condvar>,
+    /// `inner.0`: destination to the buffer of the recevier.
+    ///
+    /// `inner.1`: sends notifications that the data is updated to the receiver.
+    inner: Weak<(Mutex<Option<T>>, Condvar)>,
 }
 
 impl<T> Updater<T> {
@@ -334,25 +335,16 @@ impl<T> Updater<T> {
     /// assert!(updater.update(1).is_err());
     /// ```
     pub fn update(&self, data: T) -> Result<(), UpdateError<T>> {
-        if let (Some(dest), Some(condvar)) = (self.dest.upgrade(), self.condvar.upgrade()) {
+        if let Some((dest, cond)) = self.inner.upgrade().as_deref() {
             // lock() fails if another owner of the mutex has panicked during holding it.
             // But the owners (receiver and other updaters) never panic at the time.
             // Therefore, this unwrap() always succeeds.
             dest.lock().unwrap().replace(data);
             // Notify the receiver that a new data is stored.
-            condvar.notify_one();
+            cond.notify_one();
             Ok(())
         } else {
             Err(UpdateError(data))
-        }
-    }
-}
-
-impl<T> Clone for Updater<T> {
-    fn clone(&self) -> Self {
-        Self {
-            dest: self.dest.clone(),
-            condvar: self.condvar.clone(),
         }
     }
 }
@@ -388,15 +380,10 @@ impl<T: Debug> Error for UpdateError<T> {}
 /// assert_eq!(Ok(1), receiver.recv());
 /// ```
 pub fn channel<T>() -> (Updater<T>, Receiver<T>) {
-    let buffer = Arc::from(Mutex::from(None));
-    let dest = Arc::downgrade(&buffer);
-    let condvar = Arc::from(Condvar::new());
-    let weak_condvar = Arc::downgrade(&condvar);
-    let receiver = Receiver { buffer, condvar };
-    let updater = Updater {
-        dest,
-        condvar: weak_condvar,
-    };
+    let strong = Arc::new((Mutex::new(None), Condvar::new()));
+    let weak = Arc::downgrade(&strong);
+    let receiver = Receiver { inner: strong };
+    let updater = Updater { inner: weak };
 
     (updater, receiver)
 }
