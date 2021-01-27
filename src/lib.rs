@@ -132,8 +132,6 @@ impl<T> Receiver<T> {
     pub fn recv(&self) -> Result<T, RecvError> {
         let (buffer, cond) = self.inner.as_ref();
         loop {
-            // Prevent the updater's drop (updater's drop() locks the buffer).
-            // It is required to prevent eternal wait() below.
             let mut guard = buffer.lock().unwrap();
 
             if let Some(data) = guard.take() {
@@ -144,9 +142,26 @@ impl<T> Receiver<T> {
                 break Err(RecvError);
             }
 
-            if let Some(data) = cond.wait(guard).unwrap().take() {
+            // NOTE: It may be desirable if this timeout duration can be specified by users.
+            let dur = std::time::Duration::from_micros(100);
+
+            // Wait a notification from the updater(s) without consuming CPU time.
+            // Use wait_timeout() instead of wait().
+            // wait() blocks the current thread forever if the updater(s) dropped after the previous try_recv() is called.
+            //
+            // Condvar's wait methods may cause spurious wakeup.
+            // take() will return None under spurious wakeup because the updater(s) does not update the data yet.
+            // Thus, spurious wakeup does not corrupt channel's integrity.
+            if let Some(data) = cond.wait_timeout(guard, dur).unwrap().0.take() {
+                // The updater(s) sent notification during wait_timeout()
                 break Ok(data);
             }
+            // Arrival here means no updater sends notification, the updater(s) dropped or the updater(s) sended it before wait_timeout() is called.
+            // Under the first case the data may become available later.
+            // Under the second case, this loop will end in the next loop because try_recv() will return TryRecvError::Disconnected.
+            // Under the third case the latest data will be captured by try_recv() in the next loop.
+
+            // In summary, this loop never fall in infinite loop!
         }
     }
 
@@ -340,17 +355,6 @@ impl<T> Clone for Updater<T> {
     fn clone(&self) -> Self {
         Self {
             inner: self.inner.clone(),
-        }
-    }
-}
-
-impl<T> Drop for Updater<T> {
-    fn drop(&mut self) {
-        if let Some((dest, cond)) = self.inner.upgrade().as_deref() {
-            // Send notification to exit receiver's wait() method.
-            // This is required for preventing eternal wait of condvar.
-            let _guard = dest.lock().unwrap();
-            cond.notify_one();
         }
     }
 }
