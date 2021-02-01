@@ -17,44 +17,14 @@ use latest_value_channel::channel;
 let (updater, receiver) = channel();
 
 std::thread::spawn(move || {
-    updater.update(1).unwrap();
+    updater.update(1).unwrap(); // Update to 1
+    updater.update(2).unwrap(); // Update to 2
 })
 .join().unwrap();
 
-assert_eq!(Ok(1), receiver.recv());
+assert_eq!(Ok(2), receiver.recv()); // Receive the latest value
 ```
-## Multiple update
-```rust
-use latest_value_channel::channel;
-
-let (updater, receiver) = channel();
-let updater2 = updater.clone(); // updater can be cloned.
-
-// Only the latest data will be received
-updater.update(1).unwrap();
-updater.update(2).unwrap();
-assert_eq!(Ok(2), receiver.recv());
-
-updater.update(10).unwrap();
-updater2.update(20).unwrap();
-assert_eq!(Ok(20), receiver.recv());
-
-// Channel is valid as long as at least 1 updater exists.
-drop(updater);
-updater2.update(200).unwrap();
-assert_eq!(Ok(200), receiver.recv());
-```
-## Receive after updater dropped
-```rust
-use latest_value_channel::channel;
-
-let (updater, receiver) = channel::<i32>();
-
-drop(updater);
-// The updater dropped and no data exists on the buffer. So recv() fails.
-assert!(receiver.recv().is_err());
-```
-## Receive after update and Updater dropped
+## Disconnected channel's behavior
 ```rust
 use latest_value_channel::channel;
 
@@ -63,7 +33,7 @@ let (updater, receiver) = channel();
 updater.update(1).unwrap();
 drop(updater);
 
-// The updater dropped. but the updated data remains, so recv() succeeds.
+// The updater dropped. But the updated data remains, so recv() succeeds.
 assert_eq!(Ok(1), receiver.recv());
 
 // The updater dropped and no data exists on the buffer. So recv() fails.

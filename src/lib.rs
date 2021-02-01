@@ -17,44 +17,14 @@
 //! let (updater, receiver) = channel();
 //!
 //! std::thread::spawn(move || {
-//!     updater.update(1).unwrap();
+//!     updater.update(1).unwrap(); // Update to 1
+//!     updater.update(2).unwrap(); // Update to 2
 //! })
 //! .join().unwrap();
 //!
-//! assert_eq!(Ok(1), receiver.recv());
+//! assert_eq!(Ok(2), receiver.recv()); // Receive the latest value
 //! ```
-//! ## Multiple update
-//! ```
-//! use latest_value_channel::channel;
-//!
-//! let (updater, receiver) = channel();
-//! let updater2 = updater.clone(); // updater can be cloned.
-//!
-//! // Only the latest data will be received
-//! updater.update(1).unwrap();
-//! updater.update(2).unwrap();
-//! assert_eq!(Ok(2), receiver.recv());
-//!
-//! updater.update(10).unwrap();
-//! updater2.update(20).unwrap();
-//! assert_eq!(Ok(20), receiver.recv());
-//!
-//! // Channel is valid as long as at least 1 updater exists.
-//! drop(updater);
-//! updater2.update(200).unwrap();
-//! assert_eq!(Ok(200), receiver.recv());
-//! ```
-//! ## Receive after updater dropped
-//! ```
-//! use latest_value_channel::channel;
-//!
-//! let (updater, receiver) = channel::<i32>();
-//!
-//! drop(updater);
-//! // The updater dropped and no data exists on the buffer. So recv() fails.
-//! assert!(receiver.recv().is_err());
-//! ```
-//! ## Receive after update and updater dropped
+//! ## Disconnected channel's behavior
 //! ```
 //! use latest_value_channel::channel;
 //!
@@ -104,17 +74,7 @@ impl<T> Receiver<T> {
     /// updater.update(1).unwrap();
     /// assert_eq!(Ok(1), receiver.recv());
     /// ```
-    /// ## Receive after updater dropped
-    /// ```
-    /// use latest_value_channel::channel;
-    ///
-    /// let (updater, receiver) = channel::<i32>();
-    ///
-    /// drop(updater);
-    /// // The updater dropped and no data exists on the buffer. So recv() fails.
-    /// assert!(receiver.recv().is_err());
-    /// ```
-    /// ## Receive after update and updater dropped
+    /// ## Disconnected channel's behavior
     /// ```
     /// use latest_value_channel::channel;
     ///
